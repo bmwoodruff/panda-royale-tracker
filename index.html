@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panda Royale Score Tracker</title>
+    <!-- Load Tailwind CSS from CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load React and ReactDOM from CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Load Babel for JSX transformation in the browser.
+         This is for quick development/testing, not for production environments. -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+      /* Custom styling for the toggle switch - simplified */
+      /* The dot's transform is now handled by peer-checked on the input directly */
+      /* The background of the track is now handled by peer-checked on the div.block directly */
+      input:checked ~ .dot {
+        transform: translateX(100%);
+        background-color: #10B981; /* teal-500 */
+      }
+      input:checked ~ div.block {
+        background-color: #34D399; /* teal-400 */
+      }
+      /* Ensure body takes full height for min-h-screen to work correctly */
+      html, body, #root {
+          height: 100%;
+          margin: 0;
+      }
+    </style>
+</head>
+<body>
+    <!-- This is where your React app will be mounted -->
+    <div id="root"></div>
+
+    <!-- Your React component code goes here -->
+    <script type="text/babel">
+        // Main App component
+        const App = () => {
+          // Explicitly use React.useState and React.useRef
+          const [playerName, setPlayerName] = React.useState('Player Name');
+
+          // Fixed number of rounds for the game
+          const NUM_ROUNDS = 10;
+
+          // Define the specific category names from the scorecard
+          const CATEGORY_NAMES = [
+            "Sum of Yellow",
+            "Sum of purple x2",
+            "Sum of Blue (x2 if Glitter)",
+            "Sum of Red x # of Red",
+            "Sum of Green",
+            "Sum of Clear (White)",
+            "Pink"
+          ];
+
+          // Define colors corresponding to each category.
+          // Using Tailwind's color palette, adjusting shades for readability.
+          const CATEGORY_COLORS = [
+            "bg-yellow-100",  // Sum of Yellow
+            "bg-purple-100",  // Sum of purple x2
+            "bg-blue-100",    // Sum of Blue (x2 if Glitter)
+            "bg-red-100",     // Sum of Red x # of Red
+            "bg-green-100",   // Sum of Green
+            "bg-gray-100",    // Sum of Clear (White) - Using gray for visibility against white background
+            "bg-pink-100"     // Pink
+          ];
+
+          // The number of categories is now derived from the CATEGORY_NAMES array length
+          const NUM_CATEGORIES = CATEGORY_NAMES.length;
+
+          // State to manage scores for the single player.
+          // Each element in the 'scores' array represents a round,
+          // and each round is an array of NUM_CATEGORIES scores.
+          const [scores, setScores] = React.useState(() => {
+            // Initialize scores for 10 rounds, with NUM_CATEGORIES empty categories each
+            return Array(NUM_ROUNDS).fill(null).map(() => Array(NUM_CATEGORIES).fill(''));
+          });
+
+          // State to control the visibility of the final score value
+          // Default is false, so it's hidden by default
+          const [showFinalScore, setShowFinalScore] = React.useState(false);
+
+          // Ref for the player name input field
+          const playerNameInputRef = React.useRef(null);
+
+          /**
+           * Handles changes in the player name input field.
+           * @param {Object} e The event object from the input change.
+           */
+          const handlePlayerNameChange = (e) => {
+            setPlayerName(e.target.value);
+          };
+
+          /**
+           * Handles changes in a score input field for a specific round and category.
+           * @param {number} roundIndex The index of the round (0-9).
+           * @param {number} categoryIndex The index of the category (0 to NUM_CATEGORIES-1).
+           * @param {string} value The new value entered in the score input.
+           */
+          const handleScoreChange = (roundIndex, categoryIndex, value) => {
+            setScores(prevScores => {
+              const newScores = [...prevScores];
+              const newRoundScores = [...newScores[roundIndex]];
+              // Ensure only numeric input, or empty string if cleared.
+              // Use parseInt for numbers, but allow empty string.
+              newRoundScores[categoryIndex] = value === '' ? '' : parseInt(value, 10);
+              newScores[roundIndex] = newRoundScores;
+              return newScores;
+            });
+          };
+
+          /**
+           * Calculates the total score for a specific round.
+           * Sums up all valid numeric scores within that round's categories.
+           * @param {number} roundIndex The index of the round (0-9).
+           * @returns {number} The total score for the round.
+           */
+          const calculateRoundTotal = (roundIndex) => {
+            return scores[roundIndex].reduce((total, score) => {
+              // Add to total only if it's a valid number, otherwise treat as 0
+              return total + (typeof score === 'number' && !isNaN(score) ? score : 0);
+            }, 0);
+          };
+
+          /**
+           * Calculates the final total score for the player across all rounds.
+           * Sums up all round totals.
+           * @returns {number} The final total score for the player.
+           */
+          const calculateFinalScore = () => {
+            return scores.reduce((finalTotal, _, roundIndex) => {
+              return finalTotal + calculateRoundTotal(roundIndex);
+            }, 0);
+          };
+
+          /**
+           * Resets the game by clearing all player scores and resetting the player name.
+           * Prompts the user for confirmation before resetting.
+           */
+          const resetGame = () => {
+            // Custom confirmation dialog instead of alert()
+            const confirmReset = window.confirm("Are you sure you want to reset the game? All scores will be cleared and player name reset.");
+            if (confirmReset) {
+              setPlayerName('Player Name');
+              setScores(Array(NUM_ROUNDS).fill(null).map(() => Array(NUM_CATEGORIES).fill('')));
+            }
+          };
+
+          /**
+           * Toggles the visibility of the final score.
+           */
+          const toggleFinalScoreVisibility = () => {
+            setShowFinalScore(prev => !prev);
+          };
+
+          return (
+            <div className="min-h-screen relative overflow-hidden font-inter text-gray-800">
+              {/* Background Image Container */}
+              <div
+                className="absolute inset-0 bg-cover bg-center"
+                style={{
+                  // New bamboo image URL from Unsplash
+                  backgroundImage: "url('https://images.unsplash.com/photo-1542456485-eb9f67a6d80d?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')",
+                  opacity: 0.2, // Make it semi-transparent
+                  zIndex: -1, // Ensure it's in the background
+                }}
+              ></div>
+              {/* Semi-transparent overlay for better readability over the background image */}
+              <div className="absolute inset-0 bg-gradient-to-br from-green-50 to-teal-100 opacity-80 z-0"></div>
+
+
+              {/* Main content z-index to be above background */}
+              <div className="relative z-10 p-4">
+                <header className="text-center mb-6">
+                  <h1 className="text-4xl font-extrabold text-teal-700 mb-2 drop-shadow-lg">Panda Royale Score Tracker</h1>
+                  <p className="text-lg text-gray-600">Your personal score card for Panda Royale!</p>
+                </header>
+
+                {/* Player Name Section */}
+                <section className="mb-8 p-6 bg-white rounded-xl shadow-lg border border-teal-200">
+                  <h2 className="text-2xl font-semibold text-teal-600 mb-4">Player Details</h2>
+                  <div className="flex flex-col sm:flex-row gap-4 items-center">
+                    <label htmlFor="playerNameInput" className="text-lg font-medium text-gray-700">Player Name:</label>
+                    <input
+                      id="playerNameInput"
+                      ref={playerNameInputRef}
+                      type="text"
+                      className="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-400 focus:border-transparent transition duration-200"
+                      value={playerName}
+                      onChange={handlePlayerNameChange}
+                      aria-label="Player name input"
+                    />
+                  </div>
+                </section>
+
+                {/* Scoreboard Section */}
+                <section className="bg-white rounded-xl shadow-lg border border-teal-200 overflow-x-auto mb-8">
+                  <h2 className="text-2xl font-semibold text-teal-600 p-6 pb-0">Scoreboard</h2>
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-teal-50">
+                      <tr>
+                        <th className="sticky left-0 bg-teal-50 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">
+                          Round
+                        </th>
+                        {/* Render category headers using the defined CATEGORY_NAMES and apply colors */}
+                        {CATEGORY_NAMES.map((name, index) => (
+                          <th key={`category-header-${index}`} className={`px-2 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider ${CATEGORY_COLORS[index]} border-x border-gray-200`}>
+                            {name}
+                          </th>
+                        ))}
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
+                          Row Total
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {/* Render each round's row */}
+                      {Array.from({ length: NUM_ROUNDS }).map((_, roundIndex) => (
+                        <tr key={`round-${roundIndex}`} className="hover:bg-gray-50">
+                          <td className="sticky left-0 bg-white px-4 py-4 whitespace-nowrap font-medium text-gray-900">
+                            {roundIndex + 1}
+                          </td>
+                          {/* Render score input for each category in the round and apply colors, or render empty if restricted */}
+                          {Array.from({ length: NUM_CATEGORIES }).map((_, categoryIndex) => {
+                            // shouldRenderInput is true if it's NOT round 1, OR if it IS round 1 AND it's the first category.
+                            const shouldRenderInput = roundIndex !== 0 || (roundIndex === 0 && categoryIndex === 0);
+
+                            return (
+                              <td key={`round-${roundIndex}-cat-${categoryIndex}`} className={`px-2 py-2 whitespace-nowrap text-center ${CATEGORY_COLORS[categoryIndex]}`}>
+                                {shouldRenderInput ? (
+                                  <input
+                                    type="number"
+                                    min="0" // Assuming scores are non-negative
+                                    className="w-16 p-2 border border-gray-300 rounded-md text-center focus:ring-1 focus:ring-teal-400 focus:border-transparent transition duration-150 text-sm"
+                                    value={scores[roundIndex][categoryIndex]}
+                                    onChange={(e) => handleScoreChange(roundIndex, categoryIndex, e.target.value)}
+                                    aria-label={`Score for Round ${roundIndex + 1}, ${CATEGORY_NAMES[categoryIndex]}`}
+                                  />
+                                ) : (
+                                  // Render an empty div to maintain table structure and background color
+                                  <div className="w-16 h-8 mx-auto"></div>
+                                )}
+                              </td>
+                            );
+                          })}
+                          {/* Display round total */}
+                          <td className="px-4 py-4 whitespace-nowrap text-center font-bold text-lg text-teal-700">
+                            {calculateRoundTotal(roundIndex)}
+                          </td>
+                        </tr>
+                      ))}
+                      {/* Final Score Row - Always rendered, but score value is conditional */}
+                      <tr className="bg-teal-50">
+                        <td colSpan={NUM_CATEGORIES + 1} className="px-4 py-4 text-right font-extrabold text-2xl text-teal-800">
+                          Final Score:
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-center font-extrabold text-2xl text-teal-800 rounded-br-lg">
+                          {/* Conditionally display the final score value or a hidden indicator */}
+                          {showFinalScore ? calculateFinalScore() : '****'} {/* Display asterisks when hidden */}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </section>
+
+                {/* Toggle Final Score Visibility and Reset Game Button */}
+                <section className="text-center mt-8 flex flex-col sm:flex-row justify-center items-center gap-4">
+                  {/* Toggle Switch for Final Score */}
+                  <label htmlFor="toggleFinalScore" className="inline-flex items-center cursor-pointer">
+                    <span className="relative">
+                      <input
+                        id="toggleFinalScore"
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={showFinalScore}
+                        onChange={toggleFinalScoreVisibility}
+                      />
+                      <div className="block bg-gray-600 w-14 h-8 rounded-full peer-checked:bg-teal-400"></div>
+                      <div className="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition transform peer-checked:translate-x-full"></div>
+                    </span>
+                    <span className="ml-3 text-gray-700 font-medium">Show Final Score</span>
+                  </label>
+
+                  <button
+                    onClick={resetGame}
+                    className="bg-gray-200 hover:bg-gray-300 active:bg-gray-400 text-gray-800 font-bold py-3 px-6 rounded-lg shadow-md transition duration-200 transform hover:scale-105"
+                    aria-label="Reset game"
+                  >
+                    Reset Game
+                  </button>
+                </section>
+              </div> {/* End of relative z-10 p-4 div */}
+            </div>
+          );
+        };
+
+        // Render the App component into the root div
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
