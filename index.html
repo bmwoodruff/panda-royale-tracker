@@ -43,7 +43,7 @@
             "Sum of Yellow",
             "Sum of purple x2",
             "Sum of Blue (x2 if Glitter)",
-            "Sum of Red x # of Red",
+            "Sum of Red x # of Red", // This is the Red category
             "Sum of Green",
             "Sum of Clear (White)",
             "Pink"
@@ -97,9 +97,34 @@
             setScores(prevScores => {
               const newScores = [...prevScores];
               const newRoundScores = [...newScores[roundIndex]];
-              // Ensure only numeric input, or empty string if cleared.
-              // Use parseInt for numbers, but allow empty string.
-              newRoundScores[categoryIndex] = value === '' ? '' : parseInt(value, 10);
+
+              // For all inputs, attempt to parse as an integer.
+              // If the value is an empty string, keep it as an empty string.
+              // If it's the "Red" category and starts with '-', allow it for parsing,
+              // otherwise, ensure it's a valid number.
+              let parsedValue = value;
+              if (value === '') {
+                  parsedValue = '';
+              } else if (CATEGORY_NAMES[categoryIndex] === "Sum of Red x # of Red") {
+                  // For the Red category, allow '-' at the beginning, then parse
+                  // If it's just '-', don't parse yet, keep as string to allow user to type more
+                  if (value === '-' || /^-?\d*$/.test(value)) { // Regex to allow optional '-' followed by digits
+                      parsedValue = value; // Keep as string if still being typed (e.g., "-") or valid negative/positive number string
+                  } else {
+                      // If it's not a valid number format for Red (e.g., "abc"), revert to previous or empty
+                      parsedValue = prevScores[roundIndex][categoryIndex];
+                  }
+              } else {
+                  // For other categories, only allow non-negative numbers
+                  if (/^\d*$/.test(value)) { // Only digits allowed
+                      parsedValue = value;
+                  } else {
+                      parsedValue = prevScores[roundIndex][categoryIndex];
+                  }
+              }
+
+              // Only convert to number for calculation if it's a complete number, otherwise keep as string
+              newRoundScores[categoryIndex] = (parsedValue === '' || parsedValue === '-') ? parsedValue : parseInt(parsedValue, 10);
               newScores[roundIndex] = newRoundScores;
               return newScores;
             });
@@ -134,7 +159,6 @@
            * Prompts the user for confirmation before resetting.
            */
           const resetGame = () => {
-            // Custom confirmation dialog instead of alert()
             const confirmReset = window.confirm("Are you sure you want to reset the game? All scores will be cleared and player name reset.");
             if (confirmReset) {
               setPlayerName('Player Name');
@@ -155,15 +179,13 @@
               <div
                 className="absolute inset-0 bg-cover bg-center"
                 style={{
-                  // New bamboo image URL from Unsplash
                   backgroundImage: "url('https://images.unsplash.com/photo-1542456485-eb9f67a6d80d?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')",
-                  opacity: 0.2, // Make it semi-transparent
-                  zIndex: -1, // Ensure it's in the background
+                  opacity: 0.2,
+                  zIndex: -1,
                 }}
               ></div>
               {/* Semi-transparent overlay for better readability over the background image */}
               <div className="absolute inset-0 bg-gradient-to-br from-green-50 to-teal-100 opacity-80 z-0"></div>
-
 
               {/* Main content z-index to be above background */}
               <div className="relative z-10 p-4">
@@ -218,27 +240,23 @@
                           </td>
                           {/* Render score input for each category in the round and apply colors, or render empty if restricted */}
                           {Array.from({ length: NUM_CATEGORIES }).map((_, categoryIndex) => {
-                            // shouldRenderInput is true if it's NOT round 1, OR if it IS round 1 AND it's the first category.
                             const shouldRenderInput = roundIndex !== 0 || (roundIndex === 0 && categoryIndex === 0);
-
-                            // Determine if this is the "Sum of Red x # of Red" category
                             const isRedCategory = CATEGORY_NAMES[categoryIndex] === "Sum of Red x # of Red";
 
                             return (
                               <td key={`round-${roundIndex}-cat-${categoryIndex}`} className={`px-2 py-2 whitespace-nowrap text-center ${CATEGORY_COLORS[categoryIndex]}`}>
                                 {shouldRenderInput ? (
                                   <input
-                                    type="number"
-                                    // Remove the min attribute for the "Red" category to allow negative numbers.
-                                    // For other categories, keep min="0".
-                                    {...(isRedCategory ? {} : { min: "0" })}
+                                    // Change type to "text" for the Red category to ensure minus sign on mobile keyboards
+                                    type={isRedCategory ? "text" : "number"}
+                                    // Only apply min="0" for non-Red number inputs
+                                    {...(isRedCategory ? { pattern: "^-?\\d*$" } : { min: "0" })}
                                     className="w-16 p-2 border border-gray-300 rounded-md text-center focus:ring-1 focus:ring-teal-400 focus:border-transparent transition duration-150 text-sm"
                                     value={scores[roundIndex][categoryIndex]}
                                     onChange={(e) => handleScoreChange(roundIndex, categoryIndex, e.target.value)}
                                     aria-label={`Score for Round ${roundIndex + 1}, ${CATEGORY_NAMES[categoryIndex]}`}
                                   />
                                 ) : (
-                                  // Render an empty div to maintain table structure and background color
                                   <div className="w-16 h-8 mx-auto"></div>
                                 )}
                               </td>
@@ -250,14 +268,13 @@
                           </td>
                         </tr>
                       ))}
-                      {/* Final Score Row - Always rendered, but score value is conditional */}
+                      {/* Final Score Row */}
                       <tr className="bg-teal-50">
                         <td colSpan={NUM_CATEGORIES + 1} className="px-4 py-4 text-right font-extrabold text-2xl text-teal-800">
                           Final Score:
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-center font-extrabold text-2xl text-teal-800 rounded-br-lg">
-                          {/* Conditionally display the final score value or a hidden indicator */}
-                          {showFinalScore ? calculateFinalScore() : '****'} {/* Display asterisks when hidden */}
+                          {showFinalScore ? calculateFinalScore() : '****'}
                         </td>
                       </tr>
                     </tbody>
@@ -290,12 +307,11 @@
                     Reset Game
                   </button>
                 </section>
-              </div> {/* End of relative z-10 p-4 div */}
+              </div>
             </div>
           );
         };
 
-        // Render the App component into the root div
         ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     </script>
 </body>
