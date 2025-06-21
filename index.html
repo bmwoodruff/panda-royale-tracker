@@ -232,8 +232,8 @@
                                 {shouldRenderInput ? (
                                   <input
                                     type="text"
-                                    min="-1000" // Force it to allow negatives
-                                    inputmode="numeric"
+                                    //min="-1000" // Force it to allow negatives
+                                    //inputmode="numeric"
                                     className="w-16 p-2 border border-gray-300 rounded-md text-center focus:ring-1 focus:ring-teal-400 focus:border-transparent transition duration-150 text-sm"
                                     value={scores[roundIndex][categoryIndex]}
                                     onChange={(e) => handleScoreChange(roundIndex, categoryIndex, e.target.value)}
