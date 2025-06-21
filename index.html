@@ -6,7 +6,7 @@
     <title>Panda Royale Score Tracker</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
       /* Custom styling for the toggle switch - simplified */
@@ -221,16 +221,17 @@
                             // shouldRenderInput is true if it's NOT round 1, OR if it IS round 1 AND it's the first category.
                             const shouldRenderInput = roundIndex !== 0 || (roundIndex === 0 && categoryIndex === 0);
 
-                            // Determine the minimum value based on the category
-                            // "Sum of Red x # of Red" is at index 3 in CATEGORY_NAMES
-                            const minVal = (CATEGORY_NAMES[categoryIndex] === "Sum of Red x # of Red") ? -Infinity : 0;
+                            // Determine if this is the "Sum of Red x # of Red" category
+                            const isRedCategory = CATEGORY_NAMES[categoryIndex] === "Sum of Red x # of Red";
 
                             return (
                               <td key={`round-${roundIndex}-cat-${categoryIndex}`} className={`px-2 py-2 whitespace-nowrap text-center ${CATEGORY_COLORS[categoryIndex]}`}>
                                 {shouldRenderInput ? (
                                   <input
                                     type="number"
-                                    min={minVal} // Set min to -Infinity for "Red" category, 0 for others
+                                    // Remove the min attribute for the "Red" category to allow negative numbers.
+                                    // For other categories, keep min="0".
+                                    {...(isRedCategory ? {} : { min: "0" })}
                                     className="w-16 p-2 border border-gray-300 rounded-md text-center focus:ring-1 focus:ring-teal-400 focus:border-transparent transition duration-150 text-sm"
                                     value={scores[roundIndex][categoryIndex]}
                                     onChange={(e) => handleScoreChange(roundIndex, categoryIndex, e.target.value)}
